@@ -1,0 +1,115 @@
+
+#------------------------------------------------------------------
+# -- Configuration flags --
+#------------------------------------------------------------------
+# -- Reset the IOP --
+RESET_IOP = 1
+# -- enable DEBUGGING MODE --
+DEBUG = 0
+#------------------------------------------------------------------
+
+EE_LIBS   += -L$(PS2SDK)/ports/lib -L$(PS2DEV)/gsKit/lib/ 
+
+EE_LIBS   += -lmc -lm -lcdvd -lkernel -lfileXio -lpatches -lpadx -ldebug -llua -llualib -ljpeg -lpng -lz -lfreetype -lgskit -ldmakit -lmikmod
+
+
+EE_INCS     += -I../include -Isrc -I$(PS2SDK)/ports/include 
+EE_INCS     += -I$(PS2SDK)/ports/include/zlib -I$(PS2DEV)/gsKit/include
+
+EE_CFLAGS   += -fno-strict-aliasing
+EE_CXXFLAGS += -fno-strict-aliasing -fno-exceptions -fno-rtti
+
+ifeq ($(RESET_IOP),1)
+EE_CXXFLAGS += -DRESET_IOP
+endif
+
+ifeq ($(DEBUG),1)
+EE_CXXFLAGS += -DDEBUG
+endif
+
+
+# -- PS2 specific source code --
+EE_OBJS += src/ps2sdk/stub.o
+EE_OBJS += src/ps2sdk/pad.o
+EE_OBJS += src/ps2sdk/libtime.o
+EE_OBJS += src/ps2sdk/md5.o
+EE_OBJS += src/ps2sdk/iomanXIrx.o
+EE_OBJS += src/ps2sdk/fileXioIrx.o
+EE_OBJS += src/ps2sdk/UsbdIrx.o
+EE_OBJS += src/ps2sdk/usbhdfsd.o
+
+# -- LuaPlayer specific source code --
+EE_OBJS += src/main.o
+EE_OBJS += src/utility.o
+EE_OBJS += src/graphics.o
+EE_OBJS += src/splash.o
+EE_OBJS += src/luaplayer.o
+EE_OBJS += src/luasound.o
+EE_OBJS += src/luacontrols.o
+EE_OBJS += src/luatimer.o
+EE_OBJS += src/luagraphics.o
+EE_OBJS += src/luasystem.o
+EE_OBJS += src/sound.o
+
+ifeq ($(STANDALONE), 1)
+EE_OBJS += standalone/app/luaScript.o
+endif
+
+# -- Embedded ressources ---
+src/main.o: src/boot.cpp src/vera.cpp src/veraMono.cpp src/lualogo.cpp
+
+src/vera.cpp: src/auxiliary/Vera.ttf
+	$(PS2SDK)/bin/bin2c $< $@ ttfVera
+src/veraMono.cpp: src/auxiliary/VeraMono.ttf
+	$(PS2SDK)/bin/bin2c $< $@ ttfVeraMono
+src/lualogo.cpp: src/auxiliary/lualogo.raw
+	$(PS2SDK)/bin/bin2c $< $@ rawlualogo
+#src/lualogo.cpp: src/auxiliary/lualogo.jpg
+#	$(PS2SDK)/bin/bin2c $< $@ jpglualogo
+src/boot.cpp: src/auxiliary/boot.lua
+	$(PS2SDK)/bin/bin2c $< $@ bootString
+
+ifeq ($(STANDALONE), 1)
+standalone/app/luaScript.o: standalone/app/script.lua
+	$(PS2SDK)/bin/bin2o $< $@ scriptLua
+endif	
+
+# -- Embedded Irx(s) ---------
+src/ps2sdk/fileXioIrx.o: $(PS2SDK)/iop/irx/fileXio.irx
+	$(PS2SDK)/bin/bin2o $< $@ fileXioIrx
+src/ps2sdk/iomanXIrx.o: $(PS2SDK)/iop/irx/iomanX.irx
+	$(PS2SDK)/bin/bin2o $< $@ iomanXIrx
+src/ps2sdk/UsbdIrx.o: $(PS2SDK)/iop/irx/usbd.irx
+	$(PS2SDK)/bin/bin2o $< $@ UsbdIrx
+src/ps2sdk/usbhdfsd.o: src/ps2sdk/usbhdfsd/bin/usbhdfsd.irx
+	$(PS2SDK)/bin/bin2o $< $@ usbhdfsdIrx
+# ----------------------------
+ 
+
+all:    build-iop $(EE_BIN) 
+	$(EE_STRIP) $(EE_BIN)
+
+build-iop:
+	@echo Building IRXs
+	$(MAKE) -C src/ps2sdk/usbhdfsd
+
+clean:
+	rm -f $(EE_BIN) $(EE_OBJS)
+	rm -f src/boot.cpp
+	rm -f src/vera.cpp
+	rm -f src/veraMono.cpp
+	rm -f src/lualogo.cpp
+	$(MAKE) -C src/ps2sdk/usbhdfsd clean
+
+run:
+	ps2client -h 192.168.0.100 execee host:$(EE_BIN)
+	
+run_usb:
+	ps2client -h 192.168.0.100 execee host:$(EE_BIN) mass:/LUA/system.lua
+       
+reset:
+	ps2client -h 192.168.0.100 reset   
+
+
+include Makefile.pref
+include Makefile.eeglobal

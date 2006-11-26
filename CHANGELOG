@@ -1,0 +1,16 @@
+v0.20(R3)
+===================
+- Enhanced USB Support
+- Enhanced PS2 "core"
+  (more compatibility with existing PSP games)
+- Fixed pad issues (reported by Gamecubesuxs)
+- Code Cleaned-up
+
+v0.20(R2)
+===================
+- IOP Reset needed !
+
+v0.20(R1)
+===================
+- First release !
+  Should almost compliant with the PSP LUA API 0.20

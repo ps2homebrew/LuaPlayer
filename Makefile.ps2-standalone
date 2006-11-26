@@ -1,0 +1,9 @@
+# --
+# Change the elf name to match your game name
+# --
+EE_BIN         =  standalone/app/drmario.elf
+EE_CXXFLAGS   += -DSTANDALONE
+# --
+STANDALONE = 1
+# --
+include Makefile.ps2
